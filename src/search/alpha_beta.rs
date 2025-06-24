@@ -194,15 +194,16 @@ impl Search {
 
             // Count good replies in root position.
             if is_root {
-                let gr = if depth > 1 {
+                let (gr, reply) = if depth > 1 {
                     Search::count_good_replies(depth - 1, alpha, beta, refs)
                 } else {
-                    0
+                    (0, None)
                 };
                 refs.search_info.root_analysis.push(RootMoveAnalysis {
                     mv: current_move,
                     eval: eval_score,
                     good_replies: gr,
+                    reply,
                 });
             }
 
@@ -288,12 +289,13 @@ impl Search {
         alpha: i16,
         beta: i16,
         refs: &mut SearchRefs,
-    ) -> usize {
+    ) -> (usize, Option<Move>) {
         let mut move_list = MoveList::new();
         refs.mg.generate_moves(refs.board, &mut move_list, MoveType::All);
 
-        let mut evals: Vec<i16> = Vec::new();
+        let mut evals: Vec<(Move, i16)> = Vec::new();
         let mut best_eval = INF;
+        let mut best_move: Option<Move> = None;
 
         for i in 0..move_list.len() {
             let mv = move_list.get_move(i);
@@ -306,14 +308,20 @@ impl Search {
 
                 if score < best_eval {
                     best_eval = score;
+                    best_move = Some(mv);
                 }
-                evals.push(score);
+                evals.push((mv, score));
             }
         }
 
-        evals
+        let good: Vec<Move> = evals
             .into_iter()
-            .filter(|e| *e <= best_eval + SHARP_MARGIN)
-            .count()
+            .filter(|(_, e)| *e <= best_eval + SHARP_MARGIN)
+            .map(|(m, _)| m)
+            .collect();
+
+        let reply = if good.len() == 1 { Some(good[0]) } else { best_move };
+
+        (good.len(), reply)
     }
 }

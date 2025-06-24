@@ -86,16 +86,18 @@ impl Search {
                 let elapsed = refs.search_info.timer_elapsed();
                 let nodes = refs.search_info.nodes;
                 let hash_full = refs.tt.lock().expect(ErrFatal::LOCK).hash_full();
-                let forced: Vec<Move> = refs
+                let forced_lines: Vec<(Move, Move)> = refs
                     .search_info
                     .root_analysis
                     .iter()
                     .filter(|a| a.good_replies == 1)
-                    .map(|a| a.mv)
+                    .filter_map(|a| a.reply.map(|r| (a.mv, r)))
                     .collect();
 
-                let pv_to_send = if !forced.is_empty() {
-                    forced
+                let forced_moves: Vec<Move> = forced_lines.iter().map(|(m, _)| *m).collect();
+
+                let pv_to_send = if !forced_moves.is_empty() {
+                    forced_moves.clone()
                 } else {
                     root_pv.clone()
                 };
@@ -116,6 +118,17 @@ impl Search {
                 let report = SearchReport::SearchSummary(summary);
                 let information = Information::Search(report);
                 refs.report_tx.send(information).expect(ErrFatal::CHANNEL);
+
+                if !forced_lines.is_empty() {
+                    let mut parts: Vec<String> = Vec::new();
+                    for (mv, reply) in forced_lines.iter() {
+                        parts.push(format!("{} -> {}", mv.as_string(), reply.as_string()));
+                    }
+                    let msg = format!("sharp lines: {}", parts.join(" | "));
+                    let report = SearchReport::InfoString(msg);
+                    let information = Information::Search(report);
+                    refs.report_tx.send(information).expect(ErrFatal::CHANNEL);
+                }
 
                 // Search one ply deepr.
                 depth += 1;

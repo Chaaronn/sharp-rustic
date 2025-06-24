@@ -242,6 +242,7 @@ pub struct RootMoveAnalysis {
     pub mv: Move,
     pub eval: i16,
     pub good_replies: usize,
+    pub reply: Option<Move>,
 }
 
 // The search process needs references to a lot of data, such as a copy of
@@ -269,4 +270,5 @@ pub enum SearchReport {
     SearchSummary(SearchSummary),         // Periodic intermediate results.
     SearchCurrentMove(SearchCurrentMove), // Move currently searched.
     SearchStats(SearchStats),             // General search statistics
+    InfoString(String),                   // Informational string to GUI
 }
