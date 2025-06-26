@@ -27,7 +27,7 @@ use super::{
         INF, SEND_STATS, STALEMATE, NULL_MOVE_REDUCTION, LMR_REDUCTION, LMR_MOVE_THRESHOLD,
         LMR_LATE_THRESHOLD, LMR_LATE_REDUCTION, RECAPTURE_EXTENSION,
         MULTICUT_DEPTH, MULTICUT_REDUCTION, MULTICUT_CUTOFFS, MULTICUT_MOVES,
-        SHARP_SEQUENCE_DEPTH_CAP,
+        SHARP_SEQUENCE_DEPTH_CAP,PRUNE_MOVE_THRESHOLD, PRUNE_LATE_THRESHOLD,
     },
     Search, SearchRefs,
 };
@@ -38,6 +38,12 @@ use crate::{
     evaluation,
     movegen::defs::{Move, MoveList, MoveType, ShortMove},
 };
+
+#[cfg(test)]
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+#[cfg(test)]
+pub static PRUNE_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 impl Search {
     pub fn alpha_beta(
@@ -228,31 +234,62 @@ impl Search {
                     }
                 }
 
-                if do_pvs {
-                    eval_score = -Search::alpha_beta(depth - 1 - r + ext, -alpha - 1, -alpha, &mut node_pv, refs);
+                let mut search_depth = depth - 1 - r + ext;
+                let mut skip_full = false;
+
+                let apply_lmp = do_pvs
+                    && depth >= 3
+                    && !is_check
+                    && is_quiet
+                    && i >= PRUNE_MOVE_THRESHOLD;
+
+                if apply_lmp {
+                    let rp = if depth >= 5 && i >= PRUNE_LATE_THRESHOLD {
+                        2
+                    } else {
+                        1
+                    };
+                    let reduced = search_depth - rp;
+                    eval_score = -Search::alpha_beta(reduced, -alpha - 1, -alpha, &mut node_pv, refs);
                     if Search::time_up(refs) {
                         refs.board.unmake();
                         refs.search_info.ply -= 1;
                         return eval_score;
                     }
+                    if eval_score <= alpha {
+                        skip_full = true;
+                        #[cfg(test)]
+                        PRUNE_COUNT.fetch_add(1, Ordering::Relaxed);
+                    }
+                    node_pv.clear();
+                }
 
-                    if (eval_score > alpha) && (eval_score < beta) {
-                        eval_score = -Search::alpha_beta(depth - 1 + ext, -beta, -alpha, &mut node_pv, refs);
+                if !skip_full {
+                    if do_pvs {
+                        eval_score = -Search::alpha_beta(search_depth, -alpha - 1, -alpha, &mut node_pv, refs);
                         if Search::time_up(refs) {
                             refs.board.unmake();
                             refs.search_info.ply -= 1;
                             return eval_score;
                         }
-                    } else if apply_lmr && eval_score > alpha {
-                        eval_score = -Search::alpha_beta(depth - 1 + ext, -beta, -alpha, &mut node_pv, refs);
-                        if Search::time_up(refs) {
-                            refs.board.unmake();
-                            refs.search_info.ply -= 1;
-                            return eval_score;
+                        if (eval_score > alpha) && (eval_score < beta) {
+                            eval_score = -Search::alpha_beta(depth - 1 + ext, -beta, -alpha, &mut node_pv, refs);
+                            if Search::time_up(refs) {
+                                refs.board.unmake();
+                                refs.search_info.ply -= 1;
+                                return eval_score;
+                            }
+                        } else if apply_lmr && eval_score > alpha {
+                            eval_score = -Search::alpha_beta(depth - 1 + ext, -beta, -alpha, &mut node_pv, refs);
+                            if Search::time_up(refs) {
+                                refs.board.unmake();
+                                refs.search_info.ply -= 1;
+                                return eval_score;
+                            }
                         }
                     }
                 } else {
-                    eval_score = -Search::alpha_beta(depth - 1 - r + ext, -beta, -alpha, &mut node_pv, refs);
+                    eval_score = -Search::alpha_beta(search_depth, -beta, -alpha, &mut node_pv, refs);
                     if Search::time_up(refs) {
                         refs.board.unmake();
                         refs.search_info.ply -= 1;

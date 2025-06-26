@@ -41,6 +41,10 @@ pub const MULTICUT_MOVES: u8 = 4;
 
 pub const RECAPTURE_EXTENSION: i8 = 1;
 
+// Additional reduction and pruning constants
+pub const PRUNE_MOVE_THRESHOLD: u8 = 4;
+pub const PRUNE_LATE_THRESHOLD: u8 = 8;
+
 pub type SearchResult = (Move, SearchTerminate);
 type KillerMoves = [[ShortMove; MAX_KILLER_MOVES]; MAX_PLY as usize];
 
