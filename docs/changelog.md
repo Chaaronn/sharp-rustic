@@ -3,7 +3,8 @@
 <!-- code_chunk_output -->
 
 - [Changelog](#changelog)
-  - [25 June, 2025 - Sharp Rustic 0.0.1](#march-22-2024---sharp-rustic--001)
+  - [December 2024 - Sharp Rustic 0.0.2](#december-2024---sharp-rustic--002)
+  - [March 22, 2024 - Sharp Rustic 0.0.1](#march-22-2024---sharp-rustic--001)
   - [January 21, 2024 - Rustic Alpha 3.0.5](#january-21-2024---rustic-alpha-305)
   - [December 28, 2023 - Rustic Alpha 3.0.4](#december-28-2023---rustic-alpha-304)
   - [March 28, 2023 - Rustic Alpha 3.0.3](#march-28-2023---rustic-alpha-303)
@@ -23,6 +24,61 @@
 <!-- /code_chunk_output -->
 
 # Changelog
+
+## December 2024 - Sharp Rustic 0.0.2
+
+**Major Time Management Overhaul**
+
+This release addresses critical time management issues that were causing random timeouts. The engine now features a comprehensive, intelligent time management system that adapts to different game situations and time constraints.
+
+### Time Management Improvements
+
+- **Unified Time Checking Logic**: Replaced inconsistent time checking throughout the engine with a single, reliable `time_up()` function that uses `out_of_time()` consistently everywhere.
+
+- **Progressive Time Management**: Implemented intelligent overshoot factors based on available time:
+  - Critical time (≤1000ms): No overshoot (1.0x)
+  - Very low time (≤500ms): Minimal overshoot (1.1x) 
+  - Low time (≤2000ms): Small overshoot (1.2x)
+  - OK time (≤5000ms): Moderate overshoot (1.3x)
+  - Comfortable time (>5000ms): Larger overshoot (1.5x)
+
+- **Position-Based Time Allocation**: Engine now considers position complexity when allocating time:
+  - Check positions receive 20% time bonus
+  - Tactical positions (high move count) get more time
+  - Simple endgames receive time reduction
+  - Game phase adjustments (opening/middlegame/endgame)
+
+- **Early Termination Heuristics**: Prevents timeouts in critical situations with progressive thresholds:
+  - Critical time: 70% of allocated time
+  - Very low time: 80% of allocated time
+  - Low time: 85% of allocated time
+  - OK time: 90% of allocated time
+  - Comfortable time: 95% of allocated time
+
+- **Safety Buffers**: Added 15% safety buffer in time allocation and minimum 100ms buffer to prevent timeouts from unexpected scenarios.
+
+- **Improved Moves-to-Go Estimation**: Enhanced game phase detection for better time allocation:
+  - Opening: Full game length estimation
+  - Middlegame: 75% of game length
+  - Endgame: 50% of game length
+  - Late endgame: 25% of game length
+
+- **Time Management Debugging**: Added comprehensive logging of time management decisions for analysis and optimisation.
+
+### Technical Improvements
+
+- **Enhanced Search Termination**: Added early termination checks in both alpha-beta and quiescence search
+- **Game Phase Detection**: Intelligent piece counting and position analysis
+- **Comprehensive Test Suite**: Added tests to verify time management functionality
+- **Detailed Documentation**: Extensive UK English comments throughout the codebase
+
+### Expected Results
+
+- **Eliminated**: Random timeouts due to inconsistent time checking
+- **Improved**: Time allocation based on position complexity and game phase
+- **Enhanced**: Safety in time-critical situations
+- **Better**: Progressive time management that adapts to available time
+- **Reliable**: Consistent time management across all search modes
 
 ## March 22, 2024 - Sharp Rustic 0.0.1
 

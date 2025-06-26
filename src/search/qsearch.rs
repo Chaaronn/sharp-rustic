@@ -44,6 +44,11 @@ impl Search {
             Search::check_termination(refs);
         }
 
+        // Early termination check for time-critical situations
+        if Search::should_terminate_early(refs) {
+            return 0;
+        }
+
         // Abort if we have to terminate. Depth not finished.
         if refs.search_info.terminate != SearchTerminate::Nothing {
             return 0;
@@ -92,6 +97,11 @@ impl Search {
 
         // Iterate over the capture moves.
         for i in 0..move_list.len() {
+            // Check for time termination before processing each move
+            if Search::time_up(refs) {
+                break;
+            }
+
             // Pick the next moves with the higest score.
             Search::pick_move(&mut move_list, i);
 

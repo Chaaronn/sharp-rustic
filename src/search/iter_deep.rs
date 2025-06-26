@@ -139,7 +139,7 @@ impl Search {
             }
 
             let time_up = if is_game_time {
-                refs.search_info.timer_elapsed() > refs.search_info.allocated_time
+                Search::time_up(refs)
             } else {
                 false
             };

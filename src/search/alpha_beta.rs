@@ -55,6 +55,10 @@ impl Search {
             Search::check_termination(refs);
         }
 
+        if refs.search_info.ply > 0 && Search::should_terminate_early(refs) {
+            return 0;
+        }
+
         if refs.search_info.terminate != SearchTerminate::Nothing {
             return 0;
         }
