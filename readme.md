@@ -40,7 +40,7 @@ just for testing purposes.)
 
 # Features
 
-The current feature-set for Rustic Alpha 3.0.0 is:
+The current feature-set for Rustic Alpha 1.0.0 is:
 
 - Engine:
   - Bitboard board representation
