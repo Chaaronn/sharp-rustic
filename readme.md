@@ -21,6 +21,9 @@ it seems in low time, the eval drops out of UCI logs but it still keeps good mov
 
 it's officially better than me, consistently 
 
+depth for sharp move in a good spot, when eval gets faster we can try look further 
+
+
 # User interface
 
 The engine does not provide its own user interface. It uses the UCI and
