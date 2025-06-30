@@ -11,6 +11,16 @@ advantage.
 
 I do not take credit for any code other than in this fork.
 
+# Kinda to do / known problems / I'm tired and don't have my pc / I'm in work and I'm looking at games 
+
+it's inherently bad to search for opponents moves and chose better ones for them, so it's never gonna hold up in engine tournaments (unless enter with margin=0?)
+
+eval is quite bad regardless so sometimes it does make mistakes 
+
+it seems in low time, the eval drops out of UCI logs but it still keeps good moves? 
+
+it's officially better than me, consistently 
+
 # User interface
 
 The engine does not provide its own user interface. It uses the UCI and
