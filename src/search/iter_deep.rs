@@ -41,7 +41,11 @@ impl Search {
         refs.thread_local_data.start_search();
 
         if is_game_time {
-            let time_slice = Search::calculate_time_slice(refs);
+            // Apply emergency time management first
+            Search::emergency_time_management(refs);
+            
+            // Use enhanced time slice calculation
+            let time_slice = Search::calculate_enhanced_time_slice(refs);
             let factor = Search::dynamic_time_factor(refs);
 
             if time_slice > 0 {
@@ -57,7 +61,7 @@ impl Search {
         // Clear TT caches at the start of a new search
         Search::clear_tt_caches(refs);
         
-        while (depth <= MAX_PLY) && (depth <= refs.search_params.depth) && !stop {
+        while (depth <= refs.search_info.max_depth) && (depth <= refs.search_params.depth) && !stop {
             refs.search_info.depth = depth;
             refs.thread_local_data.search_depth = depth;
             refs.search_info.root_analysis.clear();
@@ -131,20 +135,75 @@ impl Search {
                 let information = Information::Search(report);
                 refs.report_tx.send(information).expect(ErrFatal::CHANNEL);
 
-                if !forced_lines.is_empty() {
-                    let mut parts: Vec<String> = Vec::new();
-                    for (mv, seq) in forced_lines.iter() {
-                        let seq_str = seq
-                            .iter()
-                            .map(|m| m.as_string())
-                            .collect::<Vec<String>>()
-                            .join(" ");
-                        parts.push(format!("{} -> {}", mv.as_string(), seq_str));
+                // Enhanced sharp move logging
+                if !refs.search_info.root_analysis.is_empty() {
+                    // Check if the best move is a sharp line
+                    let best_move_analysis = refs.search_info.root_analysis
+                        .iter()
+                        .find(|a| a.mv == best_move);
+                    
+                    if let Some(best_analysis) = best_move_analysis {
+                        if best_analysis.good_replies == 1 && !best_analysis.reply_sequence.is_empty() {
+                            // The best move is a sharp line - log it with top alternatives
+                            let mut sorted_analysis = refs.search_info.root_analysis.clone();
+                            sorted_analysis.sort_by(|a, b| b.eval.cmp(&a.eval));
+                            
+                            let sequence_str = best_analysis.reply_sequence
+                                .iter()
+                                .map(|m| m.as_string())
+                                .collect::<Vec<String>>()
+                                .join(" ");
+                            
+                            let mut msg = format!(
+                                "Sharp line chosen: {} (eval: {}) -> {}", 
+                                best_move.as_string(), 
+                                best_analysis.eval, 
+                                sequence_str
+                            );
+                            
+                            // Add top 3 alternatives (excluding the best move)
+                            let alternatives: Vec<_> = sorted_analysis
+                                .iter()
+                                .filter(|a| a.mv != best_move)
+                                .take(3)
+                                .collect();
+                            
+                            if !alternatives.is_empty() {
+                                msg.push_str(" | Alternatives: ");
+                                let alt_strs: Vec<String> = alternatives
+                                    .iter()
+                                    .map(|a| format!("{} ({})", a.mv.as_string(), a.eval))
+                                    .collect();
+                                msg.push_str(&alt_strs.join(", "));
+                            }
+                            
+                            let report = SearchReport::InfoString(msg);
+                            let information = Information::Search(report);
+                            refs.report_tx.send(information).expect(ErrFatal::CHANNEL);
+                        }
                     }
-                    let msg = format!("sharp lines: {}", parts.join(" | "));
-                    let report = SearchReport::InfoString(msg);
-                    let information = Information::Search(report);
-                    refs.report_tx.send(information).expect(ErrFatal::CHANNEL);
+                    
+                    // Also log any other sharp lines that weren't chosen (legacy behaviour)
+                    let other_sharp_lines: Vec<_> = forced_lines
+                        .iter()
+                        .filter(|(mv, _)| *mv != best_move)
+                        .collect();
+                    
+                    if !other_sharp_lines.is_empty() {
+                        let mut parts: Vec<String> = Vec::new();
+                        for (mv, seq) in other_sharp_lines.iter() {
+                            let seq_str = seq
+                                .iter()
+                                .map(|m| m.as_string())
+                                .collect::<Vec<String>>()
+                                .join(" ");
+                            parts.push(format!("{} -> {}", mv.as_string(), seq_str));
+                        }
+                        let msg = format!("Other sharp lines available: {}", parts.join(" | "));
+                        let report = SearchReport::InfoString(msg);
+                        let information = Information::Search(report);
+                        refs.report_tx.send(information).expect(ErrFatal::CHANNEL);
+                    }
                 }
 
                 depth += 1;
@@ -161,6 +220,20 @@ impl Search {
 
         // Flush any remaining TT updates before finishing
         Search::flush_tt_batch(refs);
+
+        // Update time statistics
+        if is_game_time {
+            let time_used = refs.search_info.timer_elapsed();
+            // Success is determined by whether we found a valid move, not by time usage
+            let success = best_move.get_move() != 0 && !refs.search_info.interrupted();
+            Search::update_time_statistics(refs, time_used, success);
+            
+            // Send time management statistics to GUI for monitoring
+            let stats_msg = Search::display_time_statistics(refs);
+            let report = SearchReport::InfoString(stats_msg);
+            let information = Information::Search(report);
+            refs.report_tx.send(information).expect(ErrFatal::CHANNEL);
+        }
 
         // Final fallback: if we still don't have a valid move, generate moves and use the first legal one
         if best_move.get_move() == 0 {
