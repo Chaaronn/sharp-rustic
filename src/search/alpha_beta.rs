@@ -50,11 +50,6 @@ impl Search {
         // Update thread-local node count
         refs.thread_local_data.increment_nodes();
 
-        if Search::time_up(refs) {
-            refs.search_info.terminate = SearchTerminate::Stop;
-            return 0;
-        }
-
         if refs.search_info.nodes & CHECK_TERMINATION == 0 {
             Search::check_termination(refs);
         }
@@ -82,6 +77,28 @@ impl Search {
         }
 
         refs.search_info.nodes += 1;
+
+        // Check for repetitions and apply penalty when winning
+        if !is_root {
+            let repetition_count = Search::is_repetition(refs.board);
+            if repetition_count > 0 {
+                // Get current evaluation to determine if we're winning
+                let current_eval = evaluation::evaluate_position(refs.board);
+                
+                // Apply graduated penalty based on advantage
+                let penalty = match current_eval {
+                    eval if eval >= 300 => -150,   // Significant advantage: large penalty
+                    eval if eval >= 150 => -75,    // Good advantage: medium penalty  
+                    eval if eval >= 50 => -25,     // Small advantage: small penalty
+                    eval if eval <= -150 => 0,     // Losing: no penalty (allow repetition)
+                    _ => -10,                       // Roughly equal: tiny penalty
+                };
+                
+                // Apply additional penalty for multiple repetitions
+                let final_penalty = penalty * (repetition_count as i16 + 1);
+                return final_penalty;
+            }
+        }
 
         let mut tt_value: Option<i16> = None;
         let mut tt_move: ShortMove = ShortMove::new(0);

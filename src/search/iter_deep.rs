@@ -104,7 +104,10 @@ impl Search {
                 refs.thread_local_data.update_best_move(best_move);
             }
 
-            if !refs.search_info.interrupted() {
+            // Check if search was interrupted during this iteration
+            let interrupted = refs.search_info.interrupted();
+            
+            if !interrupted {
                 let elapsed = refs.search_info.timer_elapsed();
                 let nodes = refs.search_info.nodes;
                 let hash_full = refs.tt.read().expect(ErrFatal::LOCK).hash_full();
@@ -119,21 +122,24 @@ impl Search {
 
                 let pv_to_send = root_pv.clone();
 
-                let summary = SearchSummary {
-                    depth,
-                    seldepth: refs.search_info.seldepth,
-                    time: elapsed,
-                    cp: eval,
-                    mate: 0,
-                    nodes,
-                    nps: Search::nodes_per_second(nodes, elapsed),
-                    hash_full,
-                    pv: pv_to_send,
-                };
+                // Only send results if we have a meaningful PV or this is depth 1
+                if !pv_to_send.is_empty() || depth == 1 {
+                    let summary = SearchSummary {
+                        depth,
+                        seldepth: refs.search_info.seldepth,
+                        time: elapsed,
+                        cp: eval,
+                        mate: 0,
+                        nodes,
+                        nps: Search::nodes_per_second(nodes, elapsed),
+                        hash_full,
+                        pv: pv_to_send,
+                    };
 
-                let report = SearchReport::SearchSummary(summary);
-                let information = Information::Search(report);
-                refs.report_tx.send(information).expect(ErrFatal::CHANNEL);
+                    let report = SearchReport::SearchSummary(summary);
+                    let information = Information::Search(report);
+                    refs.report_tx.send(information).expect(ErrFatal::CHANNEL);
+                }
 
                 // Enhanced sharp move logging
                 if !refs.search_info.root_analysis.is_empty() {
@@ -215,7 +221,8 @@ impl Search {
                 false
             };
 
-            stop = refs.search_info.interrupted() || time_up;
+            // Stop if interrupted or if we failed to complete this iteration meaningfully
+            stop = interrupted || time_up || (root_pv.is_empty() && depth > 1);
         }
 
         // Flush any remaining TT updates before finishing
