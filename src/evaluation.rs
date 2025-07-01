@@ -22,6 +22,7 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 ======================================================================= */
 
 pub mod defs;
+pub mod pawn;
 pub mod psqt;
 
 use crate::{board::Board, defs::Sides};
@@ -33,6 +34,9 @@ pub fn evaluate_position(board: &Board) -> i16 {
     let w_psqt = board.game_state.psqt[Sides::WHITE];
     let b_psqt = board.game_state.psqt[Sides::BLACK];
     let mut value = w_psqt - b_psqt;
+
+    // Add pawn structure evaluation
+    value += pawn::evaluate_pawn_structure(board);
 
     // If one of the sides is down to a bare king, apply the KING_EDGE PSQT
     // to drive that king to the edge and mate it.

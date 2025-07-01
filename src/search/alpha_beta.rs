@@ -50,6 +50,11 @@ impl Search {
         // Update thread-local node count
         refs.thread_local_data.increment_nodes();
 
+        if Search::time_up(refs) {
+            refs.search_info.terminate = SearchTerminate::Stop;
+            return 0;
+        }
+
         if refs.search_info.nodes & CHECK_TERMINATION == 0 {
             Search::check_termination(refs);
         }

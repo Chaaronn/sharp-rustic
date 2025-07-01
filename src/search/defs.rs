@@ -47,7 +47,7 @@ pub const EMERGENCY_MAX_DEPTH: i8 = 8; // Maximum depth in emergency mode
 pub const EMERGENCY_TIME_FACTOR: f64 = 0.5; // Use 50% of normal time in emergency mode
 
 // Game phase constants for adaptive moves-to-go
-pub const OPENING_PLY_THRESHOLD: usize = 20;
+pub const OPENING_PLY_THRESHOLD: usize = 25;
 pub const EARLY_MIDDLEGAME_PLY_THRESHOLD: usize = 30;
 pub const LATE_MIDDLEGAME_PLY_THRESHOLD: usize = 40;
 pub const ENDGAME_PIECE_THRESHOLD: usize = 12;
