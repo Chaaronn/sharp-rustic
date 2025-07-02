@@ -14,7 +14,8 @@ I do not take credit for any code other than in this fork.
 # Noted Improvements
 
 ### June 30 
-- Fixed critical bug causing evaluation to send "0000" when time slices ran out. Approx. 300 ELO jump. 
+- Fixed critical bug causing evaluation to send "0000" when time slices ran out. Approx. 300 ELO jump.
+- ELO ~ 1800 on Lichess BOTS
 
 
 # Kinda to do / known problems / I'm tired and don't have my pc / I'm in work and I'm looking at games 
