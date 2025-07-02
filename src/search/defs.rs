@@ -30,9 +30,10 @@ pub const MIN_TIME_CURR_MOVE: u128 = 1_000;
 pub const MAX_KILLER_MOVES: usize = 2;
 pub const NULL_MOVE_REDUCTION: i8 = 3;
 pub const LMR_REDUCTION: i8 = 1;
-pub const LMR_MOVE_THRESHOLD: u8 = 3;
-pub const LMR_LATE_THRESHOLD: u8 = 6;
-pub const LMR_LATE_REDUCTION: i8 = 2;
+pub const LMR_MOVE_THRESHOLD: u8 = 4;  // More conservative start
+pub const LMR_LATE_THRESHOLD: u8 = 8;  // Later threshold for aggressive reduction
+pub const LMR_LATE_REDUCTION: i8 = 1;  // Less aggressive late reduction
+pub const LMR_MIN_DEPTH: i8 = 4;       // Only apply LMR at higher depths
 
 pub const MULTICUT_DEPTH: i8 = 4;
 pub const MULTICUT_REDUCTION: i8 = 3;
