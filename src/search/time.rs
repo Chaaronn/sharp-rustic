@@ -172,7 +172,8 @@ impl Search {
         let gt = &refs.search_params.game_time;
         let white = refs.board.us() == Sides::WHITE;
         let clock = if white { gt.wtime } else { gt.btime };
-        let total_time = clock / 1000; // Convert to seconds
+        let increment = if white { gt.winc } else { gt.binc };
+        let total_time = clock + (increment * 30); // Estimate impact of increment by assuming a minimum of 30 moves
         
         if total_time < 60 {
             TimeControl::Bullet     // < 1 minute
@@ -234,11 +235,11 @@ impl Search {
         let move_quality = Search::assess_move_quality(refs);
         
         match move_quality {
-            MoveQuality::Excellent => base_time * 70 / 100,  // 30% less time
-            MoveQuality::Good => base_time * 85 / 100,       // 15% less time
+            MoveQuality::Excellent => base_time * 80 / 100,  // 20% less time
+            MoveQuality::Good => base_time * 90 / 100,       // 10% less time
             MoveQuality::Acceptable => base_time,            // Normal time
-            MoveQuality::Poor => base_time * 120 / 100,      // 20% more time
-            MoveQuality::Critical => base_time * 150 / 100,  // 50% more time
+            MoveQuality::Poor => base_time * 110 / 100,      // 10% more time
+            MoveQuality::Critical => base_time * 120 / 100,  // 20% more time
         }
     }
 
@@ -248,10 +249,10 @@ impl Search {
         let time_control = Search::classify_time_control(refs);
         
         match time_control {
-            TimeControl::Bullet => base_time * 80 / 100,     // 20% less time
-            TimeControl::Blitz => base_time * 90 / 100,      // 10% less time
+            TimeControl::Bullet => base_time * 90 / 100,     // 10% less time
+            TimeControl::Blitz => base_time * 95 / 100,      // 5% less time
             TimeControl::Rapid => base_time,                 // Normal time
-            TimeControl::Classical => base_time * 110 / 100, // 10% more time
+            TimeControl::Classical => base_time * 100 / 100, // 0% more time
         }
     }
 
