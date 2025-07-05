@@ -86,7 +86,7 @@ impl Search {
 
         // Prevent infinite search depth to avoid stack overflow
         if refs.search_info.ply >= MAX_PLY {
-            return evaluation::evaluate_position(refs.board);
+            return evaluation::evaluate_position(refs.board, refs.mg);
         }
 
         // Check extension: search deeper when in check for tactical accuracy
@@ -113,7 +113,7 @@ impl Search {
             let repetition_count = Search::is_repetition(refs.board);
             if repetition_count > 0 {
                 // Evaluate current position to determine advantage level
-                let current_eval = evaluation::evaluate_position(refs.board);
+                let current_eval = evaluation::evaluate_position(refs.board, refs.mg);
                 
                 // Apply graduated penalty based on our advantage
                 let penalty = match current_eval {
