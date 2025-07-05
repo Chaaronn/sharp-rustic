@@ -3,8 +3,10 @@
 <!-- code_chunk_output -->
 
 - [Changelog](#changelog)
-  - [25 June, 2025 - Sharp Rustic 0.0.1](#march-22-2024---sharp-rustic--001)
-  - [January 21, 2024 - Rustic Alpha 3.0.5](#january-21-2024---rustic-alpha-305)
+  - [December 18, 2024 - Sharp Rustic 0.0.3](#december-18-2024---sharp-rustic-003)
+    - [March 30, 2025 - Sharp Rustic 0.0.2](#march-30-2025---sharp-rustic-002)
+  - [March 22, 2025 - Sharp Rustic 0.0.1](#march-22-2025---sharp-rustic-001)
+    - [January 21, 2024 - Rustic Alpha 3.0.5](#january-21-2024---rustic-alpha-305)
   - [December 28, 2023 - Rustic Alpha 3.0.4](#december-28-2023---rustic-alpha-304)
   - [March 28, 2023 - Rustic Alpha 3.0.3](#march-28-2023---rustic-alpha-303)
   - [June 11, 2022 - Rustic Alpha 3.0.2](#june-11-2022---rustic-alpha-302)
@@ -23,6 +25,21 @@
 <!-- /code_chunk_output -->
 
 # Changelog
+
+## December 18, 2024 - Sharp Rustic 0.0.3
+
+- New Features:
+  - **Mobility Evaluation**: Added comprehensive piece mobility assessment
+    - Knight, Bishop, Rook, and Queen mobility scoring based on legal moves/attacks
+    - Progressive bonus tables rewarding pieces with greater mobility
+    - Special bonuses for rooks on open files (+30 points) and half-open files (+15 points)
+    - Bishop long diagonal mobility bonus (+10 points for 4+ diagonal squares)
+    - Differential scoring system (White mobility - Black mobility)
+  - Enhanced position evaluation with tactical awareness through mobility assessment
+- Implementation:
+  - New `src/evaluation/mobility.rs` module with efficient bitboard-based calculations
+  - Integration with existing move generator infrastructure
+  - Updated `evaluate_position()` to include mobility scoring in all search contexts
 
 ## March 30, 2025 - Sharp Rustic 0.0.2
 

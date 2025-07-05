@@ -22,17 +22,25 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 ======================================================================= */
 
 pub mod defs;
+pub mod mobility;
+pub mod pawn;
 pub mod psqt;
 
-use crate::{board::Board, defs::Sides};
+use crate::{board::Board, defs::Sides, movegen::MoveGenerator};
 use psqt::KING_EDGE;
 
-pub fn evaluate_position(board: &Board) -> i16 {
+pub fn evaluate_position(board: &Board, move_gen: &MoveGenerator) -> i16 {
     const KING_ONLY: i16 = 300; // PSQT-points
     let side = board.game_state.active_color as usize;
     let w_psqt = board.game_state.psqt[Sides::WHITE];
     let b_psqt = board.game_state.psqt[Sides::BLACK];
     let mut value = w_psqt - b_psqt;
+
+    // Add pawn structure evaluation
+    value += pawn::evaluate_pawn_structure(board);
+
+    // Add mobility evaluation
+    value += mobility::evaluate_mobility(board, move_gen);
 
     // If one of the sides is down to a bare king, apply the KING_EDGE PSQT
     // to drive that king to the edge and mate it.
