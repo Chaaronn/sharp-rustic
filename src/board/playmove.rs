@@ -150,8 +150,8 @@ impl Board {
             self.game_state.fullmove_number += 1;
         }
 
-        // Invalidate evaluation caches after move is made
-        self.invalidate_caches();
+        // Mark mobility cache as invalid - will be recomputed when needed
+        self.game_state.mobility_score = [0; Sides::BOTH];
 
         /*** Validating move: see if "us" is in check. If so, undo everything. ***/
         let is_legal = !mg.square_attacked(self, opponent, self.king_square(us));
@@ -222,8 +222,8 @@ impl Board {
             put_piece(self, opponent, Pieces::PAWN, to ^ 8);
         }
 
-        // Invalidate evaluation caches after unmake
-        self.invalidate_caches();
+        // Mark mobility cache as invalid - will be recomputed when needed
+        self.game_state.mobility_score = [0; Sides::BOTH];
     }
 
     // null-move support so the engine can pass a move and prune unpromising branches faster
@@ -243,8 +243,8 @@ impl Board {
         }
         self.swap_side();
         
-        // Invalidate caches after null move
-        self.invalidate_caches();
+        // Mark mobility cache as invalid - will be recomputed when needed
+        self.game_state.mobility_score = [0; Sides::BOTH];
     }
 
     #[cfg_attr(debug_assertions, inline(never))]
@@ -252,8 +252,8 @@ impl Board {
     pub fn unmake_null_move(&mut self) {
         self.game_state = self.history.pop();
         
-        // Invalidate caches after unmake null move
-        self.invalidate_caches();
+        // Mark mobility cache as invalid - will be recomputed when needed
+        self.game_state.mobility_score = [0; Sides::BOTH];
     }
 }
 
