@@ -13,6 +13,11 @@ I do not take credit for any code other than in this fork.
 
 # Noted Improvements
 
+### July 5
+- Implemented mobility evaluation in position assessment.
+- ELO +200
+- 1950 on Lichess
+
 ### June 30 
 - Fixed critical bug causing evaluation to send "0000" when time slices ran out. Approx. 300 ELO jump.
 - ELO ~ 1800 on Lichess BOTS
