@@ -151,7 +151,13 @@ impl Board {
         }
 
         // Invalidate evaluation caches after move is made
-        self.invalidate_caches();
+        if is_capture || promoted != Pieces::NONE {
+            // Captures and promotions change material, affecting game phase
+            self.invalidate_caches_on_capture();
+        } else {
+            // Regular moves only affect mobility
+            self.invalidate_caches();
+        }
 
         /*** Validating move: see if "us" is in check. If so, undo everything. ***/
         let is_legal = !mg.square_attacked(self, opponent, self.king_square(us));

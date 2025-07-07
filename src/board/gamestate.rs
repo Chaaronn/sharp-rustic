@@ -48,6 +48,7 @@ pub struct GameState {
     pub pawn_structure_score: i16,
     pub mobility_score: i16,
     pub pawn_hash: u64, // Hash of pawn positions to detect when cache is invalid
+    pub game_phase: i16, // Cached game phase to avoid recalculating
 }
 
 impl GameState {
@@ -64,6 +65,7 @@ impl GameState {
             pawn_structure_score: 0,
             mobility_score: 0,
             pawn_hash: 0,
+            game_phase: 0,
         }
     }
 

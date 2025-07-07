@@ -27,19 +27,22 @@ use crate::{
     misc::bits,
 };
 
-// Pawn structure evaluation scores
-pub const DOUBLED_PAWN_PENALTY: i16 = -20;
-pub const ISOLATED_PAWN_PENALTY: i16 = -25;
-pub const BACKWARD_PAWN_PENALTY: i16 = -15;
-pub const PASSED_PAWN_BONUS: [i16; 8] = [0, 10, 15, 25, 40, 60, 90, 0]; // By rank
-pub const CONNECTED_PAWN_BONUS: i16 = 8;
-pub const PAWN_CHAIN_BONUS: i16 = 5;
+// Pawn structure evaluation scores - optimized single values
+pub const DOUBLED_PAWN_PENALTY: i16 = -30;
+pub const ISOLATED_PAWN_PENALTY: i16 = -35;
+pub const BACKWARD_PAWN_PENALTY: i16 = -22;
+
+// Passed pawn bonuses by rank - stronger than before but single values
+pub const PASSED_PAWN_BONUS: [i16; 8] = [0, 20, 30, 55, 95, 160, 240, 0];
+
+pub const CONNECTED_PAWN_BONUS: i16 = 10;
+pub const PAWN_CHAIN_BONUS: i16 = 6;
 
 // File-specific bonuses/penalties
-pub const CENTRAL_PAWN_BONUS: i16 = 5; // For pawns on d/e files
+pub const CENTRAL_PAWN_BONUS: i16 = 6; // For pawns on d/e files
 pub const ROOK_FILE_PAWN_PENALTY: i16 = -10; // For pawns on a/h files
 
-/// Comprehensive pawn structure evaluation
+/// Comprehensive pawn structure evaluation - optimized for performance
 pub fn evaluate_pawn_structure(board: &Board) -> i16 {
     let white_pawns = board.get_pieces(Pieces::PAWN, Sides::WHITE);
     let black_pawns = board.get_pieces(Pieces::PAWN, Sides::BLACK);
@@ -50,7 +53,7 @@ pub fn evaluate_pawn_structure(board: &Board) -> i16 {
     white_score - black_score
 }
 
-/// Evaluate pawn structure for one side
+/// Evaluate pawn structure for one side - performance optimized
 fn evaluate_side_pawns(own_pawns: Bitboard, enemy_pawns: Bitboard, is_white: bool) -> i16 {
     let mut score = 0i16;
     

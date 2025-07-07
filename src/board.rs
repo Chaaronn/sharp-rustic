@@ -287,12 +287,7 @@ impl Board {
         }
     }
 
-    /// Update the cached mobility score
-    pub fn update_mobility_cache(&mut self, move_gen: &crate::movegen::MoveGenerator) {
-        // For now, just recompute mobility every time
-        // In a full implementation, you'd track piece movements more efficiently
-        self.game_state.mobility_score = mobility::evaluate_mobility(self, move_gen);
-    }
+
 
     /// Get cached pawn structure score (update if needed)
     pub fn get_cached_pawn_structure_score(&mut self) -> i16 {
@@ -310,14 +305,70 @@ impl Board {
     pub fn init_evaluation_caches(&mut self, move_gen: &crate::movegen::MoveGenerator) {
         self.game_state.pawn_hash = self.compute_pawn_hash();
         self.game_state.pawn_structure_score = pawn::evaluate_pawn_structure(self);
+        self.game_state.game_phase = self.calculate_game_phase();
         self.game_state.mobility_score = mobility::evaluate_mobility(self, move_gen);
+    }
+
+    /// Calculate current game phase based on piece material
+    pub fn calculate_game_phase(&self) -> i16 {
+        let mut phase = 0;
+        
+        // Count material for phase calculation
+        for side in [Sides::WHITE, Sides::BLACK] {
+            phase += self.get_pieces(Pieces::QUEEN, side).count_ones() as i16 * 4;
+            phase += self.get_pieces(Pieces::ROOK, side).count_ones() as i16 * 2;
+            phase += self.get_pieces(Pieces::BISHOP, side).count_ones() as i16 * 1;
+            phase += self.get_pieces(Pieces::KNIGHT, side).count_ones() as i16 * 1;
+        }
+        
+        // Phase ranges from 0 (endgame) to 24 (opening)
+        phase.min(24)
+    }
+
+    /// Update game phase cache (called when pieces are captured/promoted)
+    pub fn update_game_phase_cache(&mut self) {
+        self.game_state.game_phase = self.calculate_game_phase();
     }
 
     /// Mark caches as invalid (called when pieces move)
     pub fn invalidate_caches(&mut self) {
-        // For mobility, we'll always recompute since it depends on all pieces
         // For pawn structure, we'll let the hash check handle it
-        self.game_state.mobility_score = 0; // Mark as needing update
+        // For mobility, we need to track if any pieces actually moved
+        // This is a simplified approach - in a full implementation, you'd track 
+        // specific piece movements more efficiently
+        
+        // Reset mobility cache to mark it as needing recalculation
+        // In practice, you could implement more sophisticated invalidation
+        // by tracking which pieces moved and only invalidating when necessary
+        self.game_state.mobility_score = 0;
+        
+        // Game phase only changes when pieces are captured, not moved
+        // So we don't invalidate it here unless it's a capture
+    }
+
+    /// Invalidate caches when pieces are captured (more expensive operation)
+    pub fn invalidate_caches_on_capture(&mut self) {
+        self.game_state.mobility_score = 0;
+        self.update_game_phase_cache();
+    }
+
+    /// More efficient cache invalidation - only invalidate specific caches
+    pub fn invalidate_mobility_cache(&mut self) {
+        self.game_state.mobility_score = 0;
+    }
+
+    /// Check if mobility cache is valid
+    pub fn is_mobility_cache_valid(&self) -> bool {
+        // Simple check - in practice you'd have a more sophisticated validation
+        self.game_state.mobility_score != 0
+    }
+
+    /// Update the cached mobility score with smarter invalidation
+    pub fn update_mobility_cache(&mut self, move_gen: &crate::movegen::MoveGenerator) {
+        // Only recompute if cache is invalid
+        if !self.is_mobility_cache_valid() {
+            self.game_state.mobility_score = mobility::evaluate_mobility(self, move_gen);
+        }
     }
 }
 
