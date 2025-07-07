@@ -289,8 +289,9 @@ impl Board {
 
     /// Update the cached mobility score
     pub fn update_mobility_cache(&mut self, move_gen: &crate::movegen::MoveGenerator) {
-        // Recompute mobility per side and store in the array
-        self.game_state.mobility_score = mobility::evaluate_mobility_per_side(self, move_gen);
+        // For now, just recompute mobility every time
+        // In a full implementation, you'd track piece movements more efficiently
+        self.game_state.mobility_score = mobility::evaluate_mobility(self, move_gen);
     }
 
     /// Get cached pawn structure score (update if needed)
@@ -301,28 +302,23 @@ impl Board {
 
     /// Get cached mobility score (update if needed)
     pub fn get_cached_mobility_score(&mut self, move_gen: &crate::movegen::MoveGenerator) -> i16 {
-        // Check if mobility cache is invalid (both sides are 0)
-        if self.game_state.mobility_score[Sides::WHITE] == 0 && self.game_state.mobility_score[Sides::BLACK] == 0 {
-            self.update_mobility_cache(move_gen);
-        }
-        self.game_state.mobility_score[Sides::WHITE] - self.game_state.mobility_score[Sides::BLACK]
+        self.update_mobility_cache(move_gen);
+        self.game_state.mobility_score
     }
 
     /// Initialize all caches (called after board setup)
     pub fn init_evaluation_caches(&mut self, move_gen: &crate::movegen::MoveGenerator) {
         self.game_state.pawn_hash = self.compute_pawn_hash();
         self.game_state.pawn_structure_score = pawn::evaluate_pawn_structure(self);
-        self.game_state.mobility_score = mobility::evaluate_mobility_per_side(self, move_gen);
+        self.game_state.mobility_score = mobility::evaluate_mobility(self, move_gen);
     }
 
     /// Mark caches as invalid (called when pieces move)
     pub fn invalidate_caches(&mut self) {
         // For mobility, we'll always recompute since it depends on all pieces
         // For pawn structure, we'll let the hash check handle it
-        self.game_state.mobility_score = [0; Sides::BOTH]; // Mark as needing update
+        self.game_state.mobility_score = 0; // Mark as needing update
     }
-
-
 }
 
 // Private board functions (for initializating on startup)

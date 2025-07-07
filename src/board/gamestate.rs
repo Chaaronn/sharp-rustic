@@ -46,7 +46,7 @@ pub struct GameState {
     
     // Cached evaluation values for performance
     pub pawn_structure_score: i16,
-    pub mobility_score: [i16; Sides::BOTH], // Per-side mobility scores for incremental updates
+    pub mobility_score: i16,
     pub pawn_hash: u64, // Hash of pawn positions to detect when cache is invalid
 }
 
@@ -62,7 +62,7 @@ impl GameState {
             psqt: [0; Sides::BOTH],
             next_move: Move::new(0),
             pawn_structure_score: 0,
-            mobility_score: [0; Sides::BOTH],
+            mobility_score: 0,
             pawn_hash: 0,
         }
     }
