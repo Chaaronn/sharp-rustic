@@ -22,6 +22,7 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 ======================================================================= */
 
 pub mod defs;
+pub mod kingsafety;
 pub mod mobility;
 pub mod pawn;
 pub mod psqt;
@@ -29,25 +30,34 @@ pub mod psqt;
 use crate::{board::Board, defs::Sides, movegen::MoveGenerator};
 use psqt::KING_EDGE;
 
-pub fn evaluate_position(board: &Board, move_gen: &MoveGenerator) -> i16 {
+pub fn evaluate_position(board: &mut Board, move_gen: &MoveGenerator) -> i16 {
     const KING_ONLY: i16 = 300; // PSQT-points
     let side = board.game_state.active_color as usize;
     let w_psqt = board.game_state.psqt[Sides::WHITE];
     let b_psqt = board.game_state.psqt[Sides::BLACK];
     let mut value = w_psqt - b_psqt;
 
-    // Add pawn structure evaluation
-    value += pawn::evaluate_pawn_structure(board);
+    // Add cached pawn structure evaluation
+    value += board.get_cached_pawn_structure_score();
 
-    // Add mobility evaluation
-    value += mobility::evaluate_mobility(board, move_gen);
+    // Add cached mobility evaluation
+    value += board.get_cached_mobility_score(move_gen);
+
+    // Add king safety evaluation (not cached for now, as it's complex)
+    value += kingsafety::evaluate_king_safety(board, move_gen);
 
     // If one of the sides is down to a bare king, apply the KING_EDGE PSQT
     // to drive that king to the edge and mate it.
     if w_psqt < KING_ONLY || b_psqt < KING_ONLY {
-        let w_king_edge = KING_EDGE[board.king_square(Sides::WHITE)];
-        let b_king_edge = KING_EDGE[board.king_square(Sides::BLACK)];
-        value += w_king_edge - b_king_edge;
+        let w_king_square = board.king_square(Sides::WHITE);
+        let b_king_square = board.king_square(Sides::BLACK);
+        
+        // Check if king squares are valid (0-63 for chess board)
+        if w_king_square < 64 && b_king_square < 64 {
+            let w_king_edge = KING_EDGE[w_king_square];
+            let b_king_edge = KING_EDGE[b_king_square];
+            value += w_king_edge - b_king_edge;
+        }
     }
 
     // This function calculates the evaluation from white's point of view:

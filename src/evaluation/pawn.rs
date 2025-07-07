@@ -85,51 +85,13 @@ fn evaluate_side_pawns(own_pawns: Bitboard, enemy_pawns: Bitboard, is_white: boo
     score
 }
 
-/// Get passed pawns for a side
+/// Get passed pawns for a side using efficient bitboard operations
 fn get_passed_pawns(own_pawns: Bitboard, enemy_pawns: Bitboard, is_white: bool) -> Bitboard {
-    let mut passed = 0u64;
-    let mut pawns_copy = own_pawns;
-    
-    while pawns_copy != 0 {
-        let square = bits::next(&mut pawns_copy);
-        let file = square % 8;
-        let rank = square / 8;
-        
-        // Check if this pawn has any enemy pawns blocking its path or on adjacent files
-        let mut is_passed = true;
-        
-        // Check the pawn's file and adjacent files for enemy pawns in front
-        for check_file in [file.saturating_sub(1), file, (file + 1).min(7)] {
-            let file_enemies = enemy_pawns & crate::board::defs::BB_FILES[check_file];
-            
-            if file_enemies != 0 {
-                let mut enemy_pawns_copy = file_enemies;
-                while enemy_pawns_copy != 0 {
-                    let enemy_square = bits::next(&mut enemy_pawns_copy);
-                    let enemy_rank = enemy_square / 8;
-                    
-                    // Check if enemy pawn blocks this pawn's advancement
-                    if is_white && enemy_rank > rank {
-                        is_passed = false;
-                        break;
-                    } else if !is_white && enemy_rank < rank {
-                        is_passed = false;
-                        break;
-                    }
-                }
-            }
-            
-            if !is_passed {
-                break;
-            }
-        }
-        
-        if is_passed {
-            passed |= 1u64 << square;
-        }
+    if is_white {
+        bits::white_passed_pawns(own_pawns, enemy_pawns)
+    } else {
+        bits::black_passed_pawns(own_pawns, enemy_pawns)
     }
-    
-    passed
 }
 
 /// Evaluate passed pawns with rank-based bonuses
@@ -270,4 +232,167 @@ pub struct PawnStructureInfo {
     pub black_backward: Bitboard,
     pub white_passed: Bitboard,
     pub black_passed: Bitboard,
+} 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::board::defs::BB_SQUARES;
+
+    /// Old implementation for comparison in tests
+    fn get_passed_pawns_old(own_pawns: Bitboard, enemy_pawns: Bitboard, is_white: bool) -> Bitboard {
+        let mut passed = 0u64;
+        let mut pawns_copy = own_pawns;
+        
+        while pawns_copy != 0 {
+            let square = bits::next(&mut pawns_copy);
+            let file = square % 8;
+            let rank = square / 8;
+            
+            // Check if this pawn has any enemy pawns blocking its path or on adjacent files
+            let mut is_passed = true;
+            
+            // Check the pawn's file and adjacent files for enemy pawns in front
+            for check_file in [file.saturating_sub(1), file, (file + 1).min(7)] {
+                let file_enemies = enemy_pawns & crate::board::defs::BB_FILES[check_file];
+                
+                if file_enemies != 0 {
+                    let mut enemy_pawns_copy = file_enemies;
+                    while enemy_pawns_copy != 0 {
+                        let enemy_square = bits::next(&mut enemy_pawns_copy);
+                        let enemy_rank = enemy_square / 8;
+                        
+                        // Check if enemy pawn blocks this pawn's advancement
+                        if is_white && enemy_rank > rank {
+                            is_passed = false;
+                            break;
+                        } else if !is_white && enemy_rank < rank {
+                            is_passed = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if !is_passed {
+                    break;
+                }
+            }
+            
+            if is_passed {
+                passed |= 1u64 << square;
+            }
+        }
+        
+        passed
+    }
+
+    #[test]
+    fn test_passed_pawns_empty_board() {
+        let white_pawns = 0u64;
+        let black_pawns = 0u64;
+        
+        let old_white = get_passed_pawns_old(white_pawns, black_pawns, true);
+        let new_white = get_passed_pawns(white_pawns, black_pawns, true);
+        assert_eq!(old_white, new_white, "Empty board should produce identical results");
+        
+        let old_black = get_passed_pawns_old(black_pawns, white_pawns, false);
+        let new_black = get_passed_pawns(black_pawns, white_pawns, false);
+        assert_eq!(old_black, new_black, "Empty board should produce identical results");
+    }
+
+    #[test]
+    fn test_passed_pawns_single_pawn() {
+        // Single white pawn on d4, no enemy pawns
+        let white_pawns = BB_SQUARES[27]; // d4
+        let black_pawns = 0u64;
+        
+        let old_result = get_passed_pawns_old(white_pawns, black_pawns, true);
+        let new_result = get_passed_pawns(white_pawns, black_pawns, true);
+        assert_eq!(old_result, new_result, "Single passed pawn should be detected identically");
+        assert_eq!(new_result, white_pawns, "Single pawn with no enemies should be passed");
+    }
+
+    #[test] 
+    fn test_passed_pawns_blocked() {
+        // White pawn on d4, black pawn on d6 blocking
+        let white_pawns = BB_SQUARES[27]; // d4
+        let black_pawns = BB_SQUARES[43]; // d6
+        
+        let old_result = get_passed_pawns_old(white_pawns, black_pawns, true);
+        let new_result = get_passed_pawns(white_pawns, black_pawns, true);
+        assert_eq!(old_result, new_result, "Blocked pawn should be detected identically");
+        assert_eq!(new_result, 0u64, "Blocked pawn should not be passed");
+    }
+
+    #[test]
+    fn test_passed_pawns_adjacent_file_blocker() {
+        // White pawn on d4, black pawn on e6 (adjacent file)
+        let white_pawns = BB_SQUARES[27]; // d4
+        let black_pawns = BB_SQUARES[44]; // e6
+        
+        let old_result = get_passed_pawns_old(white_pawns, black_pawns, true);
+        let new_result = get_passed_pawns(white_pawns, black_pawns, true);
+        assert_eq!(old_result, new_result, "Adjacent file blocker should be detected identically");
+        assert_eq!(new_result, 0u64, "Pawn blocked by adjacent file should not be passed");
+    }
+
+    #[test]
+    fn test_passed_pawns_complex_position() {
+        // Multiple pawns in complex position
+        let white_pawns = BB_SQUARES[8] | BB_SQUARES[19] | BB_SQUARES[35]; // a2, d3, d5
+        let black_pawns = BB_SQUARES[48] | BB_SQUARES[51] | BB_SQUARES[36]; // a7, d7, e5
+        
+        let old_white = get_passed_pawns_old(white_pawns, black_pawns, true);
+        let new_white = get_passed_pawns(white_pawns, black_pawns, true);
+        assert_eq!(old_white, new_white, "Complex white position should match");
+        
+        let old_black = get_passed_pawns_old(black_pawns, white_pawns, false);
+        let new_black = get_passed_pawns(black_pawns, white_pawns, false);
+        assert_eq!(old_black, new_black, "Complex black position should match");
+    }
+
+    #[test]
+    fn test_passed_pawns_edge_files() {
+        // Test edge cases with a-file and h-file pawns
+        let white_pawns = BB_SQUARES[8] | BB_SQUARES[15]; // a2, h2
+        let black_pawns = BB_SQUARES[49] | BB_SQUARES[50]; // b7, c7
+        
+        let old_result = get_passed_pawns_old(white_pawns, black_pawns, true);
+        let new_result = get_passed_pawns(white_pawns, black_pawns, true);
+        assert_eq!(old_result, new_result, "Edge file pawns should be detected identically");
+    }
+
+    #[test]
+    fn test_passed_pawns_seventh_rank() {
+        // Advanced pawns near promotion
+        let white_pawns = BB_SQUARES[51] | BB_SQUARES[52]; // d7, e7
+        let black_pawns = BB_SQUARES[20]; // e3
+        
+        let old_result = get_passed_pawns_old(white_pawns, black_pawns, true);
+        let new_result = get_passed_pawns(white_pawns, black_pawns, true);
+        assert_eq!(old_result, new_result, "Advanced pawns should be detected identically");
+    }
+
+    #[test]
+    fn test_all_starting_position_combinations() {
+        // Test various combinations from starting positions
+        for white_mask in 0..256u64 { // 8 files for white pawns on 2nd rank
+            for black_mask in 0..256u64 { // 8 files for black pawns on 7th rank
+                let white_pawns = white_mask << 8; // 2nd rank
+                let black_pawns = black_mask << 48; // 7th rank
+                
+                let old_white = get_passed_pawns_old(white_pawns, black_pawns, true);
+                let new_white = get_passed_pawns(white_pawns, black_pawns, true);
+                assert_eq!(old_white, new_white, 
+                    "Starting position variation failed: white={:08b}, black={:08b}", 
+                    white_mask, black_mask);
+                
+                let old_black = get_passed_pawns_old(black_pawns, white_pawns, false);
+                let new_black = get_passed_pawns(black_pawns, white_pawns, false);
+                assert_eq!(old_black, new_black,
+                    "Starting position variation failed: white={:08b}, black={:08b}", 
+                    white_mask, black_mask);
+            }
+        }
+    }
 } 

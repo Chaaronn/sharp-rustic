@@ -37,7 +37,7 @@ use self::{
 };
 use crate::{
     defs::{Bitboard, NrOf, Piece, Side, Sides, Square, EMPTY},
-    evaluation::psqt::{self, FLIP, PSQT_MG},
+    evaluation::{pawn, mobility, psqt::{self, FLIP, PSQT_MG}},
     misc::bits,
 };
 use std::sync::Arc;
@@ -263,6 +263,61 @@ impl Board {
                 0u64
             }
         }
+    }
+
+    // === Cache Management Functions ===
+
+    /// Compute pawn hash for cache invalidation
+    fn compute_pawn_hash(&self) -> u64 {
+        let white_pawns = self.bb_pieces[Sides::WHITE][Pieces::PAWN];
+        let black_pawns = self.bb_pieces[Sides::BLACK][Pieces::PAWN];
+        
+        // Simple hash combining both pawn bitboards
+        white_pawns.wrapping_mul(0x517cc1b727220a95) ^ black_pawns.wrapping_mul(0x517cc1b727220a97)
+    }
+
+    /// Update the cached pawn structure score
+    pub fn update_pawn_structure_cache(&mut self) {
+        let current_hash = self.compute_pawn_hash();
+        
+        // Only recompute if pawn structure changed
+        if current_hash != self.game_state.pawn_hash {
+            self.game_state.pawn_structure_score = pawn::evaluate_pawn_structure(self);
+            self.game_state.pawn_hash = current_hash;
+        }
+    }
+
+    /// Update the cached mobility score
+    pub fn update_mobility_cache(&mut self, move_gen: &crate::movegen::MoveGenerator) {
+        // For now, just recompute mobility every time
+        // In a full implementation, you'd track piece movements more efficiently
+        self.game_state.mobility_score = mobility::evaluate_mobility(self, move_gen);
+    }
+
+    /// Get cached pawn structure score (update if needed)
+    pub fn get_cached_pawn_structure_score(&mut self) -> i16 {
+        self.update_pawn_structure_cache();
+        self.game_state.pawn_structure_score
+    }
+
+    /// Get cached mobility score (update if needed)
+    pub fn get_cached_mobility_score(&mut self, move_gen: &crate::movegen::MoveGenerator) -> i16 {
+        self.update_mobility_cache(move_gen);
+        self.game_state.mobility_score
+    }
+
+    /// Initialize all caches (called after board setup)
+    pub fn init_evaluation_caches(&mut self, move_gen: &crate::movegen::MoveGenerator) {
+        self.game_state.pawn_hash = self.compute_pawn_hash();
+        self.game_state.pawn_structure_score = pawn::evaluate_pawn_structure(self);
+        self.game_state.mobility_score = mobility::evaluate_mobility(self, move_gen);
+    }
+
+    /// Mark caches as invalid (called when pieces move)
+    pub fn invalidate_caches(&mut self) {
+        // For mobility, we'll always recompute since it depends on all pieces
+        // For pawn structure, we'll let the hash check handle it
+        self.game_state.mobility_score = 0; // Mark as needing update
     }
 }
 
