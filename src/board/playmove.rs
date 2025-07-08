@@ -150,6 +150,15 @@ impl Board {
             self.game_state.fullmove_number += 1;
         }
 
+        // Invalidate evaluation caches after move is made
+        if is_capture || promoted != Pieces::NONE {
+            // Captures and promotions change material, affecting game phase
+            self.invalidate_caches_on_capture();
+        } else {
+            // Regular moves only affect mobility
+            self.invalidate_caches();
+        }
+
         /*** Validating move: see if "us" is in check. If so, undo everything. ***/
         let is_legal = !mg.square_attacked(self, opponent, self.king_square(us));
         if !is_legal {
@@ -218,6 +227,9 @@ impl Board {
         if en_passant {
             put_piece(self, opponent, Pieces::PAWN, to ^ 8);
         }
+
+        // Invalidate evaluation caches after unmake
+        self.invalidate_caches();
     }
 
     // null-move support so the engine can pass a move and prune unpromising branches faster
@@ -236,12 +248,18 @@ impl Board {
             self.game_state.fullmove_number += 1;
         }
         self.swap_side();
+        
+        // Invalidate caches after null move
+        self.invalidate_caches();
     }
 
     #[cfg_attr(debug_assertions, inline(never))]
     #[cfg_attr(not(debug_assertions), inline(always))]
     pub fn unmake_null_move(&mut self) {
         self.game_state = self.history.pop();
+        
+        // Invalidate caches after unmake null move
+        self.invalidate_caches();
     }
 }
 

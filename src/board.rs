@@ -37,14 +37,13 @@ use self::{
 };
 use crate::{
     defs::{Bitboard, NrOf, Piece, Side, Sides, Square, EMPTY},
-    evaluation::psqt::{self, FLIP, PSQT_MG},
+    evaluation::{pawn, mobility, psqt::{self, FLIP, PSQT_MG}},
     misc::bits,
 };
 use std::sync::Arc;
 
 // This file implements the engine's board representation; it is bit-board
 // based, with the least significant bit being A1.
-#[derive(Clone)]
 pub struct Board {
     pub bb_pieces: [[Bitboard; NrOf::PIECE_TYPES]; Sides::BOTH],
     pub bb_side: [Bitboard; Sides::BOTH],
@@ -264,6 +263,112 @@ impl Board {
             }
         }
     }
+
+    // === Cache Management Functions ===
+
+    /// Compute pawn hash for cache invalidation
+    fn compute_pawn_hash(&self) -> u64 {
+        let white_pawns = self.bb_pieces[Sides::WHITE][Pieces::PAWN];
+        let black_pawns = self.bb_pieces[Sides::BLACK][Pieces::PAWN];
+        
+        // Simple hash combining both pawn bitboards
+        white_pawns.wrapping_mul(0x517cc1b727220a95) ^ black_pawns.wrapping_mul(0x517cc1b727220a97)
+    }
+
+    /// Update the cached pawn structure score
+    pub fn update_pawn_structure_cache(&mut self) {
+        let current_hash = self.compute_pawn_hash();
+        
+        // Only recompute if pawn structure changed
+        if current_hash != self.game_state.pawn_hash {
+            self.game_state.pawn_structure_score = pawn::evaluate_pawn_structure(self);
+            self.game_state.pawn_hash = current_hash;
+        }
+    }
+
+
+
+    /// Get cached pawn structure score (update if needed)
+    pub fn get_cached_pawn_structure_score(&mut self) -> i16 {
+        self.update_pawn_structure_cache();
+        self.game_state.pawn_structure_score
+    }
+
+    /// Get cached mobility score (update if needed)
+    pub fn get_cached_mobility_score(&mut self, move_gen: &crate::movegen::MoveGenerator) -> i16 {
+        self.update_mobility_cache(move_gen);
+        self.game_state.mobility_score
+    }
+
+    /// Initialize all caches (called after board setup)
+    pub fn init_evaluation_caches(&mut self, move_gen: &crate::movegen::MoveGenerator) {
+        self.game_state.pawn_hash = self.compute_pawn_hash();
+        self.game_state.pawn_structure_score = pawn::evaluate_pawn_structure(self);
+        self.game_state.game_phase = self.calculate_game_phase();
+        self.game_state.mobility_score = mobility::evaluate_mobility(self, move_gen);
+    }
+
+    /// Calculate current game phase based on piece material
+    pub fn calculate_game_phase(&self) -> i16 {
+        let mut phase = 0;
+        
+        // Count material for phase calculation
+        for side in [Sides::WHITE, Sides::BLACK] {
+            phase += self.get_pieces(Pieces::QUEEN, side).count_ones() as i16 * 4;
+            phase += self.get_pieces(Pieces::ROOK, side).count_ones() as i16 * 2;
+            phase += self.get_pieces(Pieces::BISHOP, side).count_ones() as i16 * 1;
+            phase += self.get_pieces(Pieces::KNIGHT, side).count_ones() as i16 * 1;
+        }
+        
+        // Phase ranges from 0 (endgame) to 24 (opening)
+        phase.min(24)
+    }
+
+    /// Update game phase cache (called when pieces are captured/promoted)
+    pub fn update_game_phase_cache(&mut self) {
+        self.game_state.game_phase = self.calculate_game_phase();
+    }
+
+    /// Mark caches as invalid (called when pieces move)
+    pub fn invalidate_caches(&mut self) {
+        // For pawn structure, we'll let the hash check handle it
+        // For mobility, we need to track if any pieces actually moved
+        // This is a simplified approach - in a full implementation, you'd track 
+        // specific piece movements more efficiently
+        
+        // Reset mobility cache to mark it as needing recalculation
+        // In practice, you could implement more sophisticated invalidation
+        // by tracking which pieces moved and only invalidating when necessary
+        self.game_state.mobility_score = 0;
+        
+        // Game phase only changes when pieces are captured, not moved
+        // So we don't invalidate it here unless it's a capture
+    }
+
+    /// Invalidate caches when pieces are captured (more expensive operation)
+    pub fn invalidate_caches_on_capture(&mut self) {
+        self.game_state.mobility_score = 0;
+        self.update_game_phase_cache();
+    }
+
+    /// More efficient cache invalidation - only invalidate specific caches
+    pub fn invalidate_mobility_cache(&mut self) {
+        self.game_state.mobility_score = 0;
+    }
+
+    /// Check if mobility cache is valid
+    pub fn is_mobility_cache_valid(&self) -> bool {
+        // Simple check - in practice you'd have a more sophisticated validation
+        self.game_state.mobility_score != 0
+    }
+
+    /// Update the cached mobility score with smarter invalidation
+    pub fn update_mobility_cache(&mut self, move_gen: &crate::movegen::MoveGenerator) {
+        // Only recompute if cache is invalid
+        if !self.is_mobility_cache_valid() {
+            self.game_state.mobility_score = mobility::evaluate_mobility(self, move_gen);
+        }
+    }
 }
 
 // Private board functions (for initializating on startup)
@@ -389,5 +494,48 @@ impl Board {
 
         // Done; return the key.
         key
+    }
+}
+
+// Manual Clone implementation for Board to optimize history allocation
+impl Clone for Board {
+    fn clone(&self) -> Self {
+        Self {
+            bb_pieces: self.bb_pieces,
+            bb_side: self.bb_side,
+            game_state: self.game_state,
+            // Create a fresh history for search threads with smaller capacity
+            // This avoids copying the entire history array and saves memory
+            history: History::new_for_search(),
+            piece_list: self.piece_list,
+            zr: Arc::clone(&self.zr), // Reuse the ZobristRandoms
+        }
+    }
+}
+
+// Additional methods for Board to support different cloning strategies
+impl Board {
+    /// Clone for main engine thread (preserves full history)
+    pub fn clone_for_engine(&self) -> Self {
+        Self {
+            bb_pieces: self.bb_pieces,
+            bb_side: self.bb_side,
+            game_state: self.game_state,
+            history: self.history.clone(), // Full history clone
+            piece_list: self.piece_list,
+            zr: Arc::clone(&self.zr),
+        }
+    }
+
+    /// Clone for search thread (fresh history with smaller capacity)
+    pub fn clone_for_search(&self) -> Self {
+        Self {
+            bb_pieces: self.bb_pieces,
+            bb_side: self.bb_side,
+            game_state: self.game_state,
+            history: History::new_for_search(), // Fresh history, smaller capacity
+            piece_list: self.piece_list,
+            zr: Arc::clone(&self.zr),
+        }
     }
 }

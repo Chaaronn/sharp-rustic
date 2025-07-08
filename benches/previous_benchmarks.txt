@@ -1,0 +1,161 @@
+evaluation_positions/evaluate_position/Starting Position
+                        time:   [156.33 ns 157.24 ns 158.42 ns]
+                        change: [-0.3983% +0.7013% +1.7265%] (p = 0.22 > 0.05)
+                        No change in performance detected.
+Found 7 outliers among 100 measurements (7.00%)
+  1 (1.00%) high mild
+  6 (6.00%) high severe
+evaluation_positions/evaluate_position/After 1.e4
+                        time:   [83.067 ns 83.313 ns 83.628 ns]
+                        change: [-1.9912% -1.0462% -0.1272%] (p = 0.03 < 0.05)
+                        Change within noise threshold.
+Found 10 outliers among 100 measurements (10.00%)
+  1 (1.00%) low mild
+  5 (5.00%) high mild
+  4 (4.00%) high severe
+evaluation_positions/evaluate_position/Petrov Defense
+                        time:   [86.331 ns 87.212 ns 88.181 ns]
+                        change: [+0.2955% +1.9743% +4.0201%] (p = 0.03 < 0.05)
+                        Change within noise threshold.
+Found 15 outliers among 100 measurements (15.00%)
+  5 (5.00%) high mild
+  10 (10.00%) high severe
+evaluation_positions/evaluate_position/Italian Game
+                        time:   [85.067 ns 85.620 ns 86.305 ns]
+                        change: [-3.7679% -1.7820% -0.0625%] (p = 0.06 > 0.05)
+                        No change in performance detected.
+Found 9 outliers among 100 measurements (9.00%)
+  2 (2.00%) high mild
+  7 (7.00%) high severe
+evaluation_positions/evaluate_position/Italian Game - Developed
+                        time:   [85.326 ns 85.858 ns 86.526 ns]
+                        change: [-2.3498% -1.3290% -0.4449%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 3 outliers among 100 measurements (3.00%)
+  1 (1.00%) high mild
+  2 (2.00%) high severe
+evaluation_positions/evaluate_position/Castled Position
+                        time:   [85.736 ns 86.836 ns 88.301 ns]
+                        change: [-0.5770% +1.0292% +2.8031%] (p = 0.24 > 0.05)
+                        No change in performance detected.
+Found 21 outliers among 100 measurements (21.00%)
+  4 (4.00%) low mild
+  4 (4.00%) high mild
+  13 (13.00%) high severe
+evaluation_positions/evaluate_position/Complex Middlegame
+                        time:   [83.196 ns 83.389 ns 83.585 ns]
+                        change: [-1.2319% -0.5416% +0.0400%] (p = 0.10 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+evaluation_positions/evaluate_position/King and Pawn Endgame
+                        time:   [62.849 ns 63.618 ns 64.497 ns]
+                        change: [-0.0002% +1.5956% +3.2044%] (p = 0.06 > 0.05)
+                        No change in performance detected.
+Found 16 outliers among 100 measurements (16.00%)
+  3 (3.00%) low mild
+  13 (13.00%) high severe
+evaluation_positions/evaluate_position/Lone King
+                        time:   [44.369 ns 44.726 ns 45.134 ns]
+                        change: [-3.9632% -1.5174% +0.4177%] (p = 0.21 > 0.05)
+                        No change in performance detected.
+Found 8 outliers among 100 measurements (8.00%)
+  5 (5.00%) high mild
+  3 (3.00%) high severe
+evaluation_positions/evaluate_position/Starting Position (duplicate for baseline)
+                        time:   [156.62 ns 157.59 ns 158.88 ns]
+                        change: [-3.4296% -2.3795% -1.4481%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  3 (3.00%) high mild
+  2 (2.00%) high severe
+
+evaluation_caching/cached_evaluation
+                        time:   [836.22 ns 842.77 ns 850.72 ns]
+                        change: [+1.4267% +2.4196% +3.5575%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 8 outliers among 100 measurements (8.00%)
+  1 (1.00%) high mild
+  7 (7.00%) high severe
+evaluation_caching/cache_invalidation
+                        time:   [471.01 ns 474.02 ns 477.78 ns]
+                        change: [-1.2839% +0.1282% +1.4053%] (p = 0.85 > 0.05)
+                        No change in performance detected.
+Found 11 outliers among 100 measurements (11.00%)
+  5 (5.00%) high mild
+  6 (6.00%) high severe
+
+evaluation_components/pawn_structure
+                        time:   [450.00 ps 452.13 ps 454.70 ps]
+                        change: [-5.3408% -3.5838% -2.0661%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  5 (5.00%) high severe
+evaluation_components/mobility
+                        time:   [462.19 ps 468.55 ps 476.38 ps]
+                        change: [-1.5942% +0.7439% +2.8282%] (p = 0.52 > 0.05)
+                        No change in performance detected.
+Found 13 outliers among 100 measurements (13.00%)
+  3 (3.00%) high mild
+  10 (10.00%) high severe
+evaluation_components/king_safety
+                        time:   [75.466 ns 75.689 ns 75.943 ns]
+                        change: [-0.1205% +0.4904% +1.2289%] (p = 0.15 > 0.05)
+                        No change in performance detected.
+Found 9 outliers among 100 measurements (9.00%)
+  3 (3.00%) high mild
+  6 (6.00%) high severe
+
+evaluation_search_simulation/rapid_evaluations
+                        time:   [8.5689 µs 8.6726 µs 8.7771 µs]
+                        change: [+0.0096% +0.9785% +1.8741%] (p = 0.05 < 0.05)
+                        Change within noise threshold.
+Found 12 outliers among 100 measurements (12.00%)
+  6 (6.00%) high mild
+  6 (6.00%) high severe
+evaluation_search_simulation/search_tree_simulation
+                        time:   [4.6216 µs 4.7157 µs 4.8404 µs]
+                        change: [+5.0272% +7.0117% +9.0818%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 9 outliers among 100 measurements (9.00%)
+  4 (4.00%) high mild
+  5 (5.00%) high severe
+
+evaluation_game_phases/evaluation/Opening
+                        time:   [167.30 ns 169.77 ns 172.72 ns]
+                        change: [+24.631% +35.580% +48.006%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 14 outliers among 100 measurements (14.00%)
+  6 (6.00%) high mild
+  8 (8.00%) high severe
+evaluation_game_phases/evaluation/Middlegame
+                        time:   [86.796 ns 87.776 ns 88.874 ns]
+                        change: [+1.2478% +2.4153% +3.7780%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 17 outliers among 100 measurements (17.00%)
+  8 (8.00%) high mild
+  9 (9.00%) high severe
+evaluation_game_phases/evaluation/Endgame
+                        time:   [63.668 ns 64.004 ns 64.456 ns]
+                        change: [+0.7510% +2.3038% +4.3798%] (p = 0.01 < 0.05)
+                        Change within noise threshold.
+Found 6 outliers among 100 measurements (6.00%)
+  1 (1.00%) high mild
+  5 (5.00%) high severe
+evaluation_game_phases/evaluation/Late Endgame
+                        time:   [75.407 ns 76.446 ns 77.729 ns]
+                        change: [+1.9255% +2.8754% +3.8001%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 12 outliers among 100 measurements (12.00%)
+  3 (3.00%) high mild
+  9 (9.00%) high severe
+
+
+
+Perft 1: 20 (0 ms, inf leaves/sec, hash full: 0%)
+Perft 2: 400 (0 ms, inf leaves/sec, hash full: 0%)
+Perft 3: 8902 (0 ms, inf leaves/sec, hash full: 0%)
+Perft 4: 197281 (8 ms, 24660125 leaves/sec, hash full: 0.5%)
+Perft 5: 4865609 (123 ms, 39557796 leaves/sec, hash full: 7.8%)
+Perft 6: 119060324 (1599 ms, 74459239 leaves/sec, hash full: 79%)
+Perft 7: 3195901860 (29388 ms, 108748532 leaves/sec, hash full: 100%)

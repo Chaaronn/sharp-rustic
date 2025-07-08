@@ -24,36 +24,43 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 use super::gamestate::GameState;
 use crate::defs::MAX_GAME_MOVES;
 
-// The history struct is basically an array holding the values of the game
-// states at each move. If a move is made in make(), this function pushes the
-// current game state into this array. In unmake(), that game state can then be
-// popped and restored. It is faster than a vector, because:
+// The history struct holds the game states for each move. It uses a boxed array
+// for performance (direct indexing like the original) while allowing different
+// sizes for different use cases (main engine vs search threads).
 //
-// - It is stored on the stack (a vector is stored on the heap)
-// - It doesn't do any error checking. It is up to the caller to check if the
-//   history array is either full or empty, before pushing or popping (if
-//   necessary, such as during console play: the chess engine will always have
-//   one push for every pop during search.)
+// Using Box<[GameState; N]> gives us:
+// - Array performance (direct indexing, no bounds checking overhead)
+// - Memory efficiency (heap allocation with different sizes)
+// - Manual clone optimization (avoid copying entire arrays)
 
-#[derive(Clone)]
 pub struct History {
-    list: [GameState; MAX_GAME_MOVES],
+    list: Box<[GameState]>,
     count: usize,
 }
 
 impl History {
-    // Create a new history array containing game states.
+    // Create a new history with default capacity (for main engine thread)
     pub fn new() -> Self {
         Self {
-            list: [GameState::new(); MAX_GAME_MOVES],
+            list: vec![GameState::new(); MAX_GAME_MOVES].into_boxed_slice(),
+            count: 0,
+        }
+    }
+
+    // Create a new history for search thread (smaller capacity)
+    pub fn new_for_search() -> Self {
+        // Search threads typically need much less capacity than the main game
+        // Use a smaller capacity to save memory (128 vs 2048)
+        Self {
+            list: vec![GameState::new(); 128].into_boxed_slice(),
             count: 0,
         }
     }
 
     // Wipe the entire array.
     pub fn clear(&mut self) {
-        self.list = [GameState::new(); MAX_GAME_MOVES];
         self.count = 0;
+        // Note: We don't need to clear the actual array elements as they'll be overwritten
     }
 
     // Put a new game state into the array.
@@ -62,7 +69,7 @@ impl History {
         self.count += 1;
     }
 
-    // Return the last game state and decremnt the counter. The game state is
+    // Return the last game state and decrement the counter. The game state is
     // not deleted from the array. If necessary, another game state will just
     // overwrite it.
     pub fn pop(&mut self) -> GameState {
@@ -76,5 +83,31 @@ impl History {
 
     pub fn len(&self) -> usize {
         self.count
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.count == 0
+    }
+
+    // Get the capacity of the underlying array
+    pub fn capacity(&self) -> usize {
+        self.list.len()
+    }
+}
+
+impl Clone for History {
+    fn clone(&self) -> Self {
+        // For cloning, we preserve the current state but create a new array
+        // with the same capacity as the original
+        Self {
+            list: self.list.clone(),
+            count: self.count,
+        }
+    }
+}
+
+impl Default for History {
+    fn default() -> Self {
+        Self::new()
     }
 }

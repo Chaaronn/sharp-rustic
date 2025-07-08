@@ -238,3 +238,91 @@ pub fn black_pawn_attacks(pawns: Bitboard) -> Bitboard {
     let right_attacks = (pawns & !BB_FILES[7]) >> 7; // Not on H-file, attack right
     left_attacks | right_attacks
 }
+
+/// Get enemy front spans including adjacent files - used for passed pawn detection
+pub fn enemy_front_spans_white(enemy_pawns: Bitboard) -> Bitboard {
+    let mut spans = black_front_spans(enemy_pawns); // Enemy pawns advancing towards us
+    
+    // Include adjacent files for more comprehensive blocking detection
+    let left_spans = ((enemy_pawns & !BB_FILES[0]) >> 1) & spans;
+    let right_spans = ((enemy_pawns & !BB_FILES[7]) << 1) & spans;
+    
+    spans | black_front_spans(left_spans | right_spans)
+}
+
+/// Get enemy front spans including adjacent files - used for passed pawn detection
+pub fn enemy_front_spans_black(enemy_pawns: Bitboard) -> Bitboard {
+    let mut spans = white_front_spans(enemy_pawns); // Enemy pawns advancing towards us
+    
+    // Include adjacent files for more comprehensive blocking detection
+    let left_spans = ((enemy_pawns & !BB_FILES[0]) >> 1) & spans;
+    let right_spans = ((enemy_pawns & !BB_FILES[7]) << 1) & spans;
+    
+    spans | white_front_spans(left_spans | right_spans)
+}
+
+/// Efficient passed pawn detection for white using bitboard operations
+pub fn white_passed_pawns(white_pawns: Bitboard, black_pawns: Bitboard) -> Bitboard {
+    // Classic formula: passed pawn has no enemy pawns on its file or adjacent files in front
+    
+    // Get enemy pawn spans on adjacent files as well  
+    let mut enemy_spans = black_front_spans(black_pawns); // Enemy pawns' forward squares
+    
+    // Include adjacent files by shifting enemy pawns left and right, then getting their spans
+    let left_adjacent = (black_pawns & !BB_FILES[0]) >> 1; // Shift left (avoid wrap)
+    let right_adjacent = (black_pawns & !BB_FILES[7]) << 1; // Shift right (avoid wrap)
+    enemy_spans |= black_front_spans(left_adjacent | right_adjacent);
+    
+    // Include the enemy pawns themselves as blockers
+    enemy_spans |= black_pawns;
+    
+    // Now find white pawns whose forward spans don't intersect with enemy spans
+    let mut passed = 0u64;
+    let mut pawns_copy = white_pawns;
+    
+    while pawns_copy != 0 {
+        let square = next(&mut pawns_copy);
+        let pawn_bit = 1u64 << square;
+        let pawn_forward_span = white_front_spans(pawn_bit);
+        
+        // If this pawn's forward path is clear of enemy influence, it's passed
+        if (pawn_forward_span & enemy_spans) == 0 {
+            passed |= pawn_bit;
+        }
+    }
+    
+    passed
+}
+
+/// Efficient passed pawn detection for black using bitboard operations  
+pub fn black_passed_pawns(black_pawns: Bitboard, white_pawns: Bitboard) -> Bitboard {
+    // Classic formula: passed pawn has no enemy pawns on its file or adjacent files in front
+    
+    // Get enemy pawn spans on adjacent files as well  
+    let mut enemy_spans = white_front_spans(white_pawns); // Enemy pawns' forward squares
+    
+    // Include adjacent files by shifting enemy pawns left and right, then getting their spans
+    let left_adjacent = (white_pawns & !BB_FILES[0]) >> 1; // Shift left (avoid wrap)
+    let right_adjacent = (white_pawns & !BB_FILES[7]) << 1; // Shift right (avoid wrap)
+    enemy_spans |= white_front_spans(left_adjacent | right_adjacent);
+    
+    // Include the enemy pawns themselves as blockers
+    enemy_spans |= white_pawns;
+    
+    // Now find black pawns whose forward spans don't intersect with enemy spans
+    let mut passed = 0u64;
+    let mut pawns_copy = black_pawns;
+    
+    while pawns_copy != 0 {
+        let square = next(&mut pawns_copy);
+        let pawn_bit = 1u64 << square;
+        let pawn_forward_span = black_front_spans(pawn_bit);
+        
+        // If this pawn's forward path is clear of enemy influence, it's passed
+        if (pawn_forward_span & enemy_spans) == 0 {
+            passed |= pawn_bit;
+        }
+    }
+    
+    passed
+}

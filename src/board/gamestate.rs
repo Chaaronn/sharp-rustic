@@ -43,6 +43,12 @@ pub struct GameState {
     pub zobrist_key: u64,
     pub psqt: [i16; Sides::BOTH],
     pub next_move: Move,
+    
+    // Cached evaluation values for performance
+    pub pawn_structure_score: i16,
+    pub mobility_score: i16,
+    pub pawn_hash: u64, // Hash of pawn positions to detect when cache is invalid
+    pub game_phase: i16, // Cached game phase to avoid recalculating
 }
 
 impl GameState {
@@ -56,6 +62,10 @@ impl GameState {
             zobrist_key: 0,
             psqt: [0; Sides::BOTH],
             next_move: Move::new(0),
+            pawn_structure_score: 0,
+            mobility_score: 0,
+            pawn_hash: 0,
+            game_phase: 0,
         }
     }
 

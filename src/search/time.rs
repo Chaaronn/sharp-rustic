@@ -24,15 +24,13 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 use super::{defs::SearchRefs, Search};
 use crate::defs::Sides;
 use super::defs::{
-    GamePhase, TimeControl, MoveQuality, TimeStats,
+    GamePhase, TimeControl, MoveQuality,
     OPENING_PLY_THRESHOLD, EARLY_MIDDLEGAME_PLY_THRESHOLD, LATE_MIDDLEGAME_PLY_THRESHOLD, ENDGAME_PIECE_THRESHOLD,
     EMERGENCY_TIME_THRESHOLD, EMERGENCY_MAX_DEPTH, EMERGENCY_TIME_FACTOR
 };
 use crate::defs::MAX_PLY;
 
 pub const OVERHEAD: i128 = 50; // msecs
-const GAME_LENGTH: usize = 25; // moves
-const MOVES_BUFFER: usize = 5; //moves
 const CRITICAL_TIME: u128 = 1_000; // msecs
 const OK_TIME: u128 = CRITICAL_TIME * 5; // msecs
 
@@ -46,8 +44,8 @@ impl Search {
         // allocated search time. The more time the engine has, the larger
         // the overshoot-factor can be.
         let overshoot_factor = match allocated {
-            x if x > OK_TIME => 1.0,                       // Allow large overshoot.
-            x if x > CRITICAL_TIME && x <= OK_TIME => 1.5, // Low on time. Reduce overshoot.
+            x if x > OK_TIME => 1.5,                       // Allow large overshoot.
+            x if x > CRITICAL_TIME && x <= OK_TIME => 1.1, // Low on time. Reduce overshoot.
             x if x <= CRITICAL_TIME => 1.0,                // Critical time. Don't overshoot.
             _ => 1.0,                                      // This case shouldn't happen.
         };
@@ -95,27 +93,11 @@ impl Search {
 
         // Up to one minute on the clock scales linearly between 0.3 and 0.6.
         let base = 0.3_f64;
-        let max_add = 0.3_f64;
-        let max_clock = 60_000_f64; // cap at a minute
+        let max_add = 0.6_f64;
+        let max_clock = 120_000_f64; // cap at two minutes
         let capped = if clock > max_clock { max_clock } else { clock };
 
         base + (capped / max_clock) * max_add
-    }
-
-    // Here we try to come up with some sort of sensible value for "moves
-    // to go", if this value is not supplied.
-    fn moves_to_go(refs: &SearchRefs) -> usize {
-        // If moves to go was supplied, then use this.
-        if let Some(x) = refs.search_params.game_time.moves_to_go {
-            x
-        } else {
-            // Guess moves to go if not supplied.
-            let white = refs.board.us() == Sides::WHITE;
-            let ply = refs.board.history.len();
-            let moves_made = if white { ply / 2 } else { (ply - 1) / 2 };
-
-            GAME_LENGTH - (moves_made % GAME_LENGTH) + MOVES_BUFFER
-        }
     }
 
     // Adaptive moves-to-go based on game phase
@@ -130,12 +112,12 @@ impl Search {
         // Adaptive estimation based on game phase
         // This is incredibly basic and needs to be improved, but should be good enough 
         if ply <= OPENING_PLY_THRESHOLD {
-            30  // Opening: more moves expected
+            40  // Opening: more moves expected
         } else if ply <= EARLY_MIDDLEGAME_PLY_THRESHOLD {
             if piece_count >= 20 {
-                25  // Early middlegame
+                30  // Early middlegame
             } else if piece_count >= 10 {
-                20  // Late middlegame
+                25  // Late middlegame
             } else {
                 15  // Late game with pieces
             }
@@ -173,7 +155,7 @@ impl Search {
         let white = refs.board.us() == Sides::WHITE;
         let clock = if white { gt.wtime } else { gt.btime };
         let increment = if white { gt.winc } else { gt.binc };
-        let total_time = clock + (increment * 30); // Estimate impact of increment by assuming a minimum of 30 moves
+        let total_time = clock + (increment * 40); // Estimate impact of increment by assuming a minimum of 40 moves
         
         if total_time < 60 {
             TimeControl::Bullet     // < 1 minute

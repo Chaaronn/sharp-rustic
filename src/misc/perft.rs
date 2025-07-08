@@ -55,7 +55,7 @@ pub fn run(
     let mtx_board = board.lock().expect(ErrFatal::LOCK);
 
     // Clone the locked board for local use.
-    let mut local_board = mtx_board.clone();
+            let mut local_board = mtx_board.clone_for_search();
 
     // The function now has its own local board. Drop the guard. It is not
     // necessary to keep the lock until perft runs out.
