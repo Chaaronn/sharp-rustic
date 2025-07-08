@@ -44,7 +44,6 @@ use std::sync::Arc;
 
 // This file implements the engine's board representation; it is bit-board
 // based, with the least significant bit being A1.
-#[derive(Clone)]
 pub struct Board {
     pub bb_pieces: [[Bitboard; NrOf::PIECE_TYPES]; Sides::BOTH],
     pub bb_side: [Bitboard; Sides::BOTH],
@@ -495,5 +494,48 @@ impl Board {
 
         // Done; return the key.
         key
+    }
+}
+
+// Manual Clone implementation for Board to optimize history allocation
+impl Clone for Board {
+    fn clone(&self) -> Self {
+        Self {
+            bb_pieces: self.bb_pieces,
+            bb_side: self.bb_side,
+            game_state: self.game_state,
+            // Create a fresh history for search threads with smaller capacity
+            // This avoids copying the entire history array and saves memory
+            history: History::new_for_search(),
+            piece_list: self.piece_list,
+            zr: Arc::clone(&self.zr), // Reuse the ZobristRandoms
+        }
+    }
+}
+
+// Additional methods for Board to support different cloning strategies
+impl Board {
+    /// Clone for main engine thread (preserves full history)
+    pub fn clone_for_engine(&self) -> Self {
+        Self {
+            bb_pieces: self.bb_pieces,
+            bb_side: self.bb_side,
+            game_state: self.game_state,
+            history: self.history.clone(), // Full history clone
+            piece_list: self.piece_list,
+            zr: Arc::clone(&self.zr),
+        }
+    }
+
+    /// Clone for search thread (fresh history with smaller capacity)
+    pub fn clone_for_search(&self) -> Self {
+        Self {
+            bb_pieces: self.bb_pieces,
+            bb_side: self.bb_side,
+            game_state: self.game_state,
+            history: History::new_for_search(), // Fresh history, smaller capacity
+            piece_list: self.piece_list,
+            zr: Arc::clone(&self.zr),
+        }
     }
 }

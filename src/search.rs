@@ -123,7 +123,7 @@ impl Search {
                 if !halt && !quit {
                     // Copy the current board to be used in this thread
                     let mtx_board = arc_board.lock().expect(ErrFatal::LOCK);
-                    let mut board = mtx_board.clone();
+                    let mut board = mtx_board.clone_for_search();
                     std::mem::drop(mtx_board);
 
                     // Create a place to put search information
